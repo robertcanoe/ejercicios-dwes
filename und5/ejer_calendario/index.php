@@ -64,6 +64,19 @@
     .domingo { background: pink; }
     .nacionales { background: yellow; }
     .locales { background: lightgreen; }
+    
+    .tareas-container {
+        margin: 20px auto;
+        max-width: 800px;
+    }
+    
+    .tareas-container ul {
+        padding-left: 20px;
+    }
+    
+    .tareas-container li {
+        margin-bottom: 10px;
+    }
 </style>
 
 </head>
@@ -128,5 +141,59 @@
         ?>
 
     </table>
+
+    <h1>Listado de Tareas</h1>
+    <div class="tareas-container">
+        <?php
+        // Cargar tareas desde el archivo
+        $tareasFichero = [];
+        if (file_exists("tareas.txt")) {
+            $lineas = file("tareas.txt", FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lineas as $linea) {
+                $partes = explode(",", $linea);
+                if (count($partes) >= 2) {
+                    $fecha = trim($partes[0]);
+                    $tarea = trim($partes[1]);
+                    if (!isset($tareasFichero[$fecha])) {
+                        $tareasFichero[$fecha] = [];
+                    }
+                    $tareasFichero[$fecha][] = $tarea;
+                }
+            }
+        }
+
+        // Combinar tareas del fichero con las de la sesión
+        $todasLasTareas = $tareasFichero;
+        if (isset($_SESSION["listaTareas"])) {
+            foreach ($_SESSION["listaTareas"] as $fecha => $tareas) {
+                if (!isset($todasLasTareas[$fecha])) {
+                    $todasLasTareas[$fecha] = [];
+                }
+                foreach ($tareas as $tarea) {
+                    if (!in_array($tarea, $todasLasTareas[$fecha])) {
+                        $todasLasTareas[$fecha][] = $tarea;
+                    }
+                }
+            }
+        }
+
+        // Mostrar tareas organizadas por fecha
+        if (count($todasLasTareas) > 0) {
+            echo "<ul>";
+            ksort($todasLasTareas); // Ordenar por fecha
+            foreach ($todasLasTareas as $fecha => $tareas) {
+                echo "<li><strong>Fecha: $fecha</strong>";
+                echo "<ul>";
+                foreach ($tareas as $tarea) {
+                    echo "<li>$tarea</li>";
+                }
+                echo "</ul></li>";
+            }
+            echo "</ul>";
+        } else {
+            echo "<p>No hay tareas disponibles</p>";
+        }
+        ?>
+    </div>
 </body>
 </html>
