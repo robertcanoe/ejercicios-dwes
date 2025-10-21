@@ -1,0 +1,6 @@
+15/10/2025,despliegue
+15/10/2025,despliegue
+2/10/2025,cliente
+2/10/2025,cliente
+7/10/2025,proyecto
+7/10/2025,proyecto

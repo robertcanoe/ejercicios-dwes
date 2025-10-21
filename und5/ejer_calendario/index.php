@@ -3,15 +3,82 @@
     include("./lib/function.php");
     session_start();
 
+
+    if (!isset($_SESSION['tareas'])) {
+        $file = "data/tareas.txt";
+        if (file_exists($file)) {
+            $_SESSION['tareas'] = json_decode(file_get_contents($file), true);
+        } else {
+            $_SESSION['tareas'] = [];
+        }
+    }
+
     // Declaramos las variables
     $anio_form = date("Y");
     $mes_form = date("m");
     $listatareas = [];
+    
+    // Inicializar la variable de sesión si no existe
+    if (!isset($_SESSION["listaTareas"])) {
+        $_SESSION["listaTareas"] = [];
+    }
+    
+    // Inicializar variable para la fecha seleccionada
+    $fechaSeleccionada = "";
+    if (isset($_GET["fecha"])) {
+        $fechaSeleccionada = clearData($_GET["fecha"]);
+    }
 
     if (isset($_POST["enviar"])) {
         if($_POST["anio"] != "" && $_POST["mes"] != "") {
             $anio_form = clearData($_POST["anio"]);
             $mes_form = clearData($_POST["mes"]);
+            // Resetear la fecha seleccionada al cambiar de mes/año
+            $fechaSeleccionada = "";
+        }
+    }
+    
+    // Procesar el formulario para añadir tareas
+    if (isset($_POST["añadirTarea"])) {
+        if(isset($_POST["fecha"]) && isset($_POST["tarea"]) && $_POST["tarea"] != "") {
+            $fecha = clearData($_POST["fecha"]);
+            $tarea = clearData($_POST["tarea"]);
+            
+            // Inicializar el array de tareas para esta fecha si no existe
+            if (!isset($_SESSION["listaTareas"][$fecha])) {
+                $_SESSION["listaTareas"][$fecha] = [];
+            }
+            
+            // Añadir la tarea a la sesión
+            $_SESSION["listaTareas"][$fecha][] = $tarea;
+            
+            // También añadir la tarea directamente al archivo
+            $f = fopen("data/tareas.txt", "a");
+            fwrite($f, "$fecha,$tarea\n");
+            fclose($f);
+        }
+    }
+    
+    // Procesar la eliminación de tareas para una fecha específica
+    if (isset($_POST["eliminarTareas"]) && isset($_POST["fecha"])) {
+        $fecha = clearData($_POST["fecha"]);
+        
+        // Eliminar de la sesión
+        if (isset($_SESSION["listaTareas"][$fecha])) {
+            unset($_SESSION["listaTareas"][$fecha]);
+        }
+        
+        // Actualizar el archivo de tareas (eliminar las tareas de esa fecha)
+        if (file_exists("data/tareas.txt")) {
+            $lineas = file("data/tareas.txt", FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            $f = fopen("data/tareas.txt", "w");
+            foreach ($lineas as $linea) {
+                $partes = explode(",", $linea);
+                if (count($partes) >= 2 && trim($partes[0]) != $fecha) {
+                    fwrite($f, $linea . "\n");
+                }
+            }
+            fclose($f);
         }
     }
 
@@ -19,12 +86,13 @@
         $listatareas = $_SESSION["listaTareas"];
 
         // Añadir a un fichero
-        $f = fopen("tareas.txt", "a");
+        $f = fopen("data/tareas.txt", "a");
         foreach ($_SESSION["listaTareas"] as $fechaSesion => $tareas) {
             foreach ($tareas as $tarea) {
                 fwrite($f, "$fechaSesion,$tarea\n");
             }
         }
+        fclose($f);
     }
 
     // Comprobamos el numero de dias del mes
@@ -132,7 +200,9 @@
                 } else if(in_array($fecha, $nacionales)) {
                     echo '<td class="nacionales">' . $j . '</td>'; 
                 } else {
-                    echo '<td><a href="tareas.php?fecha=' . $fecha . "/$anio_form" . '">' . $j . '</a></td>'; 
+                    $fechaCompleta = $fecha . "/$anio_form";
+                    $claseSeleccionada = ($fechaSeleccionada == $fechaCompleta) ? 'style="background-color: #e0e0ff;"' : '';
+                    echo '<td ' . $claseSeleccionada . '><a href="index.php?fecha=' . $fechaCompleta . '">' . $j . '</a></td>'; 
                 }
             }
 
@@ -142,6 +212,41 @@
 
     </table>
 
+    <h1>Gestión de Tareas</h1>
+    
+    <?php if ($fechaSeleccionada != ""): ?>
+    <!-- Formulario para añadir tareas -->
+    <div class="form-container">
+        <h3>Añadir Nueva Tarea para <?php echo $fechaSeleccionada; ?></h3>
+        <form action="" method="post">
+            <div>
+                <label for="tarea" >Título de la tarea:</label>
+                <input type="text" name="tarea" id="tarea" required>
+                <input type="hidden" name="fecha" value="<?php echo $fechaSeleccionada; ?>">
+            </div>
+            <div>
+                <button type="submit" name="añadirTarea" >Añadir Tarea</button>
+                <a href="index.php">Cancelar</a>
+            </div>
+        </form>
+    </div>
+    <?php else: ?>
+    <?php endif; ?>
+    
+<!-- Formulario para eliminar tareas de una fecha 
+    <div class="form-container">
+        <h3>Eliminar Tareas por Fecha</h3>
+        <form action="" method="post">
+            <div class="form-group">
+                <label for="fecha-eliminar">Fecha (formato: DD/MM/AAAA):</label>
+                <input type="text" name="fecha" id="fecha-eliminar" placeholder="Ejemplo: 15/10/2025" required>
+            </div>
+            <div class="form-group">
+                <button type="submit" name="eliminarTareas">Eliminar Todas las Tareas de esta Fecha</button>
+            </div>
+        </form>
+    </div> -->
+    
     <h1>Listado de Tareas</h1>
     <div class="tareas-container">
         <?php
