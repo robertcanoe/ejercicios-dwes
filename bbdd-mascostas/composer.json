@@ -1,0 +1,6 @@
+{
+    "name": "proyecto/mascotas",
+    "require": {
+        "vlucas/phpdotenv": "^5.0"
+    }
+}
