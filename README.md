@@ -19,3 +19,5 @@
 [Unidad 5](und5/) -> (ejercicio calendario)
 
 [Proyecto mascostas](mascotas/)
+
+[Juego 7 y medio](practica_sieteymedio/)
